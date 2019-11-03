@@ -41,4 +41,10 @@ protocol Renderer {
     func bullet(_ text: String, indent: RendererElement.Indent)
     func newLine(_ count: Int)
     func header(_ text: String, _ header: RendererElement.Header)
+
+    func onlyInFirstHeader(count: Int?)
+    func onlyInSecondHeader(count: Int?)
+    func differentValuesHeader(count: Int?)
+    func successHeader(_ text: String)
+    func errorHeader(_ text: String)
 }

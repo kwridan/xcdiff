@@ -22,6 +22,7 @@ public enum Format: String, RawRepresentable, CaseIterable {
     case console
     case markdown
     case json
+    case git
 }
 
 public struct Mode {
