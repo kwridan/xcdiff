@@ -48,5 +48,10 @@
         "alias": "target_only_in_second_g_headers",
         "command": ["-p1", "{ios_project_1}", "-p2", "{ios_project_2}", "-g", "headers", "-t", "NewFramework", "-v"],
         "comment": "Target is only in second project when comparing headers"
+    },
+    {
+        "alias": "git_diff_renderer",
+        "command": ["-p1", "{ios_project_1}", "-p2", "{ios_project_2}", "-d", "-v", "-f", "git"],
+        "comment": "Git diff renderer example"
     }
 ]
