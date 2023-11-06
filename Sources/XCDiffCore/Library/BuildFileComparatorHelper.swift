@@ -28,9 +28,9 @@ final class BuildFileComparatorHelper {
             .filter { $0.platformFilters != $1.platformFilters }
             .map { (first, second) in
                 CompareResult.DifferentValues(
-                    context: "\(first.name) platform filters",
-                    first: first.platformFilters?.joined(separator: ", "),
-                    second: second.platformFilters?.joined(separator: ", ")
+                    context: first.name,
+                    first: "platformFilters = \(describe(first.platformFilters))",
+                    second: "platformFilters = \(describe(second.platformFilters))"
                 )
             }
     }

@@ -401,8 +401,8 @@ final class CopyFilesComparatorTests: XCTestCase {
                   context: ["\"Target1\" target", "CopyFiles"],
                   differentValues: [
                       .init(context: "a.txt",
-                            first: "platformFilter = ios, attributes = [\"A1\", \"B1\"]",
-                            second: "platformFilter = macos, attributes = [\"A2\", \"B2\"]"),
+                            first: "platformFilters = [\"ios\"], attributes = [\"A1\", \"B1\"]",
+                            second: "platformFilters = [\"macos\"], attributes = [\"A2\", \"B2\"]"),
                   ]),
         ])
     }

@@ -136,8 +136,29 @@ final class CopyFilesComparator: Comparator {
                     return nil
                 }
                 let attributes = $0.settings?["ATTRIBUTES"] as? [String] ?? []
-                return FileDescriptor(path: path, platformFilter: $0.platformFilter, attributes: attributes)
+
+                return FileDescriptor(
+                    path: path,
+                    platformFilters: platformFilters(from: $0),
+                    attributes: attributes
+                )
             }
+    }
+
+    private func platformFilters(from file: PBXBuildFile) -> [String]? {
+        guard file.platformFilter != nil || file.platformFilters != nil else {
+            return nil
+        }
+        var filters: [String] = []
+        if let platformFilter = file.platformFilter {
+            filters.append(platformFilter)
+        }
+
+        if let platformFilters = file.platformFilters {
+            filters.append(contentsOf: platformFilters)
+        }
+
+        return filters
     }
 }
 
@@ -183,13 +204,13 @@ private struct CopyFilesBuildPhaseDescriptor: Equatable {
 
 private struct FileDescriptor: Equatable {
     let path: String
-    let platformFilter: String?
+    let platformFilters: [String]?
     let attributes: [String]
 
     func properties(compareTo second: FileDescriptor) -> String {
         var result = [String]()
-        if platformFilter != second.platformFilter {
-            result.append("platformFilter = \(describe(platformFilter))")
+        if platformFilters != second.platformFilters {
+            result.append("platformFilters = \(describe(platformFilters))")
         }
         if attributes != second.attributes {
             result.append("attributes = \(attributes.toSet().subtractingAndSorted(second.attributes.toSet()))")

@@ -541,6 +541,60 @@ final class LinkedDependenciesComparatorTests: XCTestCase {
         ])
     }
 
+    func testCompare_whenDifferentPlatformFilters() throws {
+        // Given
+        let first = project(name: "P1")
+            .addTarget(name: "T1") {
+                $0.addLinkedDependencies(
+                    [
+                        LinkedDependenciesData(
+                            name: "ARKit.framework",
+                            platformFilter: "ios"
+                        )
+                    ]
+                )
+            }
+            .projectDescriptor()
+
+        let second = project(name: "P2")
+            .addTarget(name: "T1") {
+                $0.addLinkedDependencies(
+                    [
+                        LinkedDependenciesData(
+                            name: "ARKit.framework",
+                            platformFilter: nil
+                        )
+                    ]
+                )
+            }
+            .projectDescriptor()
+
+        // When
+        let actual = try subject.compare(
+            first,
+            second,
+            parameters: .all
+        )
+
+        // Then
+        XCTAssertEqual(
+            actual,
+            [
+                CompareResult(
+                    tag: "linked_dependencies",
+                    context: ["\"T1\" target"],
+                    differentValues: [
+                        .init(
+                            context: "ARKit.framework",
+                            first: "platformFilters = [\"ios\"]",
+                            second: "platformFilters = nil"
+                        ),
+                    ]
+                )
+            ]
+        )
+    }
+
     // MARK: - Helpers
 
     private func noDifference(targets: [String] = []) -> [CompareResult] {
