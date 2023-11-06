@@ -23,11 +23,18 @@ typealias TargetPair = (first: PBXTarget, second: PBXTarget)
 struct SourceDescriptor: Hashable {
     let path: String
     let flags: String?
+    let platformFilters: [String]?
 }
 
 struct HeaderDescriptor: Hashable {
     let path: String
     let attributes: String?
+    let platformFilters: [String]?
+}
+
+struct BuildFileDescriptor: Hashable {
+    let name: String
+    let platformFilters: [String]?
 }
 
 struct LinkedDependencyDescriptor: Hashable {
@@ -35,6 +42,7 @@ struct LinkedDependencyDescriptor: Hashable {
     let path: String?
     let package: SwiftPackageDescriptor?
     let type: DependencyDescriptorType
+    let platformFilters: [String]?
 }
 
 struct EmbeddedFrameworksDescriptor: Hashable {
@@ -114,8 +122,11 @@ final class TargetsHelper {
         let buildFiles = headersBuildPhase.files?.compactMap { $0 } ?? []
 
         return try buildFiles.map {
-            HeaderDescriptor(path: try path(from: $0.file, sourceRoot: sourceRoot) ?? "",
-                             attributes: $0.attributes())
+            HeaderDescriptor(
+                path: try path(from: $0.file, sourceRoot: sourceRoot) ?? "",
+                attributes: $0.attributes(),
+                platformFilters: $0.combinedPlatformFilters()
+            )
         }
     }
 
@@ -134,12 +145,18 @@ final class TargetsHelper {
         let buildFiles = sourcesBuildPhase.files?.compactMap { $0 } ?? []
 
         return try buildFiles.map {
-            SourceDescriptor(path: try path(from: $0.file, sourceRoot: sourceRoot) ?? "",
-                             flags: $0.compilerFlags())
+            SourceDescriptor(
+                path: try path(from: $0.file, sourceRoot: sourceRoot) ?? "",
+                flags: $0.compilerFlags(),
+                platformFilters: $0.combinedPlatformFilters()
+            )
         }
     }
 
-    func resources(from target: PBXTarget, sourceRoot: Path) throws -> [String] {
+    func resources(
+        from target: PBXTarget,
+        sourceRoot: Path
+    ) throws -> [String] {
         guard let resourcesBuildPhase = try target.resourcesBuildPhase() else {
             return []
         }
@@ -171,15 +188,21 @@ final class TargetsHelper {
         }
         return dependencyFiles.compactMap {
             if $0.file?.name != nil || $0.file?.path != nil {
-                return LinkedDependencyDescriptor(name: $0.file?.name,
-                                                  path: $0.file?.path,
-                                                  package: nil,
-                                                  type: $0.settings == nil ? .required : .optional)
+                return LinkedDependencyDescriptor(
+                    name: $0.file?.name,
+                    path: $0.file?.path,
+                    package: nil,
+                    type: $0.settings == nil ? .required : .optional,
+                    platformFilters: $0.combinedPlatformFilters()
+                )
             } else if let product = $0.product {
-                return LinkedDependencyDescriptor(name: product.productName,
-                                                  path: nil,
-                                                  package: product.package.flatMap(swiftPackageDescriptor),
-                                                  type: $0.settings == nil ? .required : .optional)
+                return LinkedDependencyDescriptor(
+                    name: product.productName,
+                    path: nil,
+                    package: product.package.flatMap(swiftPackageDescriptor),
+                    type: $0.settings == nil ? .required : .optional,
+                    platformFilters: $0.combinedPlatformFilters()
+                )
             }
             return nil
         }
@@ -277,6 +300,22 @@ private extension PBXBuildFile {
             return attributes
         }
         return nil
+    }
+
+    func combinedPlatformFilters() -> [String]? {
+        guard platformFilter != nil || platformFilters != nil else {
+            return nil
+        }
+        var filters: [String] = []
+        if let platformFilter {
+            filters.append(platformFilter)
+        }
+
+        if let platformFilters {
+            filters.append(contentsOf: platformFilters)
+        }
+
+        return filters
     }
 }
 

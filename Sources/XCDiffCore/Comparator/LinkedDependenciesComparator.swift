@@ -17,11 +17,16 @@
 import Foundation
 
 final class LinkedDependenciesComparator: Comparator {
-    private typealias DependencyDescriptorPair = (first: LinkedDependencyDescriptor,
-                                                  second: LinkedDependencyDescriptor)
-    private typealias EmbeddedFrameworksDescriptorPair = (first: EmbeddedFrameworksDescriptor,
-                                                          second: EmbeddedFrameworksDescriptor)
+    private typealias DependencyDescriptorPair = (
+        first: LinkedDependencyDescriptor,
+        second: LinkedDependencyDescriptor
+    )
+    private typealias EmbeddedFrameworksDescriptorPair = (
+        first: EmbeddedFrameworksDescriptor,
+        second: EmbeddedFrameworksDescriptor
+    )
     private let targetsHelper = TargetsHelper()
+    private let buildFileComparatorHelper = BuildFileComparatorHelper()
 
     let tag = "linked_dependencies"
 
@@ -48,11 +53,19 @@ final class LinkedDependenciesComparator: Comparator {
 
         let attributesDifferences = self.attributesDifferences(in: descriptorPairs)
         let packagesDifferences = packageDifferences(in: descriptorPairs)
+        let platformFilterDiffrences = buildFileComparatorHelper
+            .platformFilterDifferences(
+                in: descriptorPairs.compactMap(buildFileDescriptorPair)
+            )
 
-        return result(context: ["\"\(commonTarget.first.name)\" target"],
-                      first: firstPaths,
-                      second: secondPaths,
-                      differentValues: attributesDifferences + packagesDifferences)
+        return result(
+            context: ["\"\(commonTarget.first.name)\" target"],
+            first: firstPaths,
+            second: secondPaths,
+            differentValues: attributesDifferences
+            + packagesDifferences
+            + platformFilterDiffrences
+        )
     }
 
     private func dependencyKey(dependency: LinkedDependencyDescriptor) -> String? {
@@ -116,5 +129,31 @@ final class LinkedDependenciesComparator: Comparator {
             return nil
         },
         uniquingKeysWith: { first, _ in first })
+    }
+
+    private func buildFileDescriptorPair(
+        from pair: DependencyDescriptorPair
+    ) -> BuildFileComparatorHelper.BuildFileDescriptorPair? {
+        guard let first = buildFileDescriptor(from: pair.first),
+              let second = buildFileDescriptor(from: pair.second) else {
+            return nil
+        }
+        return BuildFileComparatorHelper.BuildFileDescriptorPair(
+            first: first,
+            second: second
+        )
+    }
+
+    private func buildFileDescriptor(
+        from descriptor: LinkedDependencyDescriptor
+    ) -> BuildFileDescriptor? {
+        guard let key = dependencyKey(dependency: descriptor) else {
+            return nil
+        }
+
+        return BuildFileDescriptor(
+            name: key,
+            platformFilters: descriptor.platformFilters
+        )
     }
 }
