@@ -16,6 +16,10 @@
 
 import Foundation
 
+protocol DiffComparable: Hashable {
+    var diffKey: String { get }
+}
+
 extension Comparator {
     func result(context: [String] = [],
                 description: String? = nil,
@@ -51,6 +55,46 @@ extension Comparator {
                       onlyInFirst: first.subtractingAndSorted(second),
                       onlyInSecond: second.subtractingAndSorted(first),
                       differentValues: differentValues)
+    }
+
+    func result<T: DiffComparable>(
+        context: [String] = [],
+        description: String? = nil,
+        first: [T] = [],
+        second: [T] = [],
+        diffCommonValues: (([(first: T, second: T)]) -> [CompareResult.DifferentValues])? = nil
+    ) -> CompareResult {
+        let firstKeys = Set(first.map(\.diffKey))
+        let secondKeys = Set(second.map(\.diffKey))
+
+        let firstMap = Dictionary(
+            first.map { ($0.diffKey, $0) },
+            uniquingKeysWith: { $1 }
+        )
+
+        let secondMap = Dictionary(
+            second.map { ($0.diffKey, $0) },
+            uniquingKeysWith: { $1 }
+        )
+
+        let common = firstKeys
+            .intersection(secondKeys)
+            .sorted()
+            .map { key in
+                let commonFirst = firstMap[key]!
+                let commonSecond = secondMap[key]!
+                return (first: commonFirst, second: commonSecond)
+            }
+        
+        let differentValues = diffCommonValues?(common) ?? []
+
+        return result(
+            context: context,
+            description: description,
+            onlyInFirst: firstKeys.subtractingAndSorted(secondKeys),
+            onlyInSecond: secondKeys.subtractingAndSorted(firstKeys),
+            differentValues: differentValues
+        )
     }
 }
 

@@ -21,6 +21,7 @@ final class HeadersComparator: Comparator {
 
     let tag = "headers"
     private let targetsHelper = TargetsHelper()
+    private let buildFileComparatorHelper = BuildFileComparatorHelper()
 
     func compare(_ first: ProjectDescriptor,
                  _ second: ProjectDescriptor,
@@ -30,37 +31,23 @@ final class HeadersComparator: Comparator {
             let firstHeaders = try targetsHelper.headers(from: firstTarget, sourceRoot: first.sourceRoot)
             let secondHeaders = try targetsHelper.headers(from: secondTarget, sourceRoot: second.sourceRoot)
 
-            let firstPaths = Set(firstHeaders.map { $0.path })
-            let secondPaths = Set(secondHeaders.map { $0.path })
+            return result(
+                context: ["\"\(secondTarget.name)\" target"],
+                first: firstHeaders,
+                second: secondHeaders,
+                diffCommonValues: { common in
+                    let differentValues = self.attributesDifferences(in: common)
+                    let buildFileDifferences = self.buildFileComparatorHelper.diff(
+                        common.map(self.buildFileDescriptorPair)
+                    )
 
-            let commonHeaders = commonHeaderDescriptorPairs(first: firstHeaders, second: secondHeaders)
-            let differentValues = attributesDifferences(in: commonHeaders)
-
-            return result(context: ["\"\(secondTarget.name)\" target"],
-                          first: firstPaths,
-                          second: secondPaths,
-                          differentValues: differentValues)
+                    return differentValues + buildFileDifferences
+                }
+            )
         }
     }
 
     // MARK: - Private
-
-    /// Returns common header descriptors as a header descriptor pair
-    private func commonHeaderDescriptorPairs(first: [HeaderDescriptor],
-                                             second: [HeaderDescriptor]) -> [HeaderDescriptorPair] {
-        let firstHeaderDescriptorMap = headerPathMap(from: first)
-        let secondHeaderDescriptorMap = headerPathMap(from: second)
-
-        let firstPaths = Set(firstHeaderDescriptorMap.keys)
-        let secondPaths = Set(secondHeaderDescriptorMap.keys)
-
-        let commonSources = firstPaths
-            .intersection(secondPaths)
-            .map { (firstHeaderDescriptorMap[$0]!, secondHeaderDescriptorMap[$0]!) }
-            .sorted { left, right in left.0.path < right.0.path }
-
-        return commonSources
-    }
 
     /// Returns attributes differences between header pairs
     private func attributesDifferences(in headerDescriptorPairs: [HeaderDescriptorPair])
@@ -75,5 +62,24 @@ final class HeadersComparator: Comparator {
     /// Returns a dictionary that maps header descriptors by their path `[path: HeaderDescriptor]`
     private func headerPathMap(from headerDescriptors: [HeaderDescriptor]) -> [String: HeaderDescriptor] {
         return Dictionary(headerDescriptors.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func buildFileDescriptorPair(
+        from headerDescriptorPair: HeaderDescriptorPair
+    ) -> BuildFileComparatorHelper.BuildFileDescriptorPair {
+        (
+            first: buildFileDescriptor(from: headerDescriptorPair.first),
+            second: buildFileDescriptor(from: headerDescriptorPair.second)
+        )
+    }
+
+    private func buildFileDescriptor(
+        from descriptor: HeaderDescriptor
+    ) -> BuildFileDescriptor {
+        return BuildFileDescriptor(
+            name: descriptor.path,
+            platformFilters: descriptor.platformFilters,
+            attributes: []
+        )
     }
 }

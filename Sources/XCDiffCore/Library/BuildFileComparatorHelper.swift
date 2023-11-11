@@ -21,16 +21,16 @@ final class BuildFileComparatorHelper {
         second: BuildFileDescriptor
     )
 
-    func platformFilterDifferences(
-        in buildFileDescriptorPairs: [BuildFileDescriptorPair]
+    func diff(
+        _ buildFileDescriptorPairs: [BuildFileDescriptorPair]
     ) -> [CompareResult.DifferentValues] {
         buildFileDescriptorPairs
-            .filter { $0.platformFilters != $1.platformFilters }
+            .filter { $0 != $1 }
             .map { (first, second) in
                 CompareResult.DifferentValues(
                     context: first.name,
-                    first: "platformFilters = \(describe(first.platformFilters))",
-                    second: "platformFilters = \(describe(second.platformFilters))"
+                    first: first.properties(compareTo: second),
+                    second: second.properties(compareTo: first)
                 )
             }
     }

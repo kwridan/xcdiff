@@ -26,14 +26,13 @@ struct SourceDescriptor: Hashable {
     let platformFilters: [String]?
 }
 
-struct HeaderDescriptor: Hashable {
+struct HeaderDescriptor: Hashable, DiffComparable {
+    var diffKey: String {
+        path
+    }
+    
     let path: String
     let attributes: String?
-    let platformFilters: [String]?
-}
-
-struct BuildFileDescriptor: Hashable {
-    let name: String
     let platformFilters: [String]?
 }
 
@@ -43,11 +42,6 @@ struct LinkedDependencyDescriptor: Hashable {
     let package: SwiftPackageDescriptor?
     let type: DependencyDescriptorType
     let platformFilters: [String]?
-}
-
-struct EmbeddedFrameworksDescriptor: Hashable {
-    let path: String
-    let codeSignOnCopy: Bool
 }
 
 enum DependencyDescriptorType: String {
@@ -156,14 +150,21 @@ final class TargetsHelper {
     func resources(
         from target: PBXTarget,
         sourceRoot: Path
-    ) throws -> [String] {
+    ) throws -> [BuildFileDescriptor] {
         guard let resourcesBuildPhase = try target.resourcesBuildPhase() else {
             return []
         }
         let buildFiles = resourcesBuildPhase.files?.compactMap { $0 } ?? []
-
+        
         return try buildFiles.compactMap {
-            try path(from: $0.file, sourceRoot: sourceRoot)
+            guard let path = try path(from: $0.file, sourceRoot: sourceRoot) else {
+                return nil
+            }
+            return BuildFileDescriptor(
+                name: path,
+                platformFilters: $0.combinedPlatformFilters(),
+                attributes: []
+            )
         }
     }
 
@@ -299,9 +300,11 @@ private extension PBXBuildFile {
         if let attributes = anyAttributes as? String {
             return attributes
         }
-        return nil
+        return String(describing: anyAttributes)
     }
+}
 
+extension PBXBuildFile {
     func combinedPlatformFilters() -> [String]? {
         guard platformFilter != nil || platformFilters != nil else {
             return nil

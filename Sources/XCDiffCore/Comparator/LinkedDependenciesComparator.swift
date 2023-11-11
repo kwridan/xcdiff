@@ -21,10 +21,6 @@ final class LinkedDependenciesComparator: Comparator {
         first: LinkedDependencyDescriptor,
         second: LinkedDependencyDescriptor
     )
-    private typealias EmbeddedFrameworksDescriptorPair = (
-        first: EmbeddedFrameworksDescriptor,
-        second: EmbeddedFrameworksDescriptor
-    )
     private let targetsHelper = TargetsHelper()
     private let buildFileComparatorHelper = BuildFileComparatorHelper()
 
@@ -53,9 +49,9 @@ final class LinkedDependenciesComparator: Comparator {
 
         let attributesDifferences = self.attributesDifferences(in: descriptorPairs)
         let packagesDifferences = packageDifferences(in: descriptorPairs)
-        let platformFilterDiffrences = buildFileComparatorHelper
-            .platformFilterDifferences(
-                in: descriptorPairs.compactMap(buildFileDescriptorPair)
+        let buildFileDifferences = buildFileComparatorHelper
+            .diff(
+                descriptorPairs.compactMap(buildFileDescriptorPair)
             )
 
         return result(
@@ -64,7 +60,7 @@ final class LinkedDependenciesComparator: Comparator {
             second: secondPaths,
             differentValues: attributesDifferences
             + packagesDifferences
-            + platformFilterDiffrences
+            + buildFileDifferences
         )
     }
 
@@ -153,7 +149,8 @@ final class LinkedDependenciesComparator: Comparator {
 
         return BuildFileDescriptor(
             name: key,
-            platformFilters: descriptor.platformFilters
+            platformFilters: descriptor.platformFilters,
+            attributes: []
         )
     }
 }
